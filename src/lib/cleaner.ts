@@ -7,6 +7,11 @@
  *      or *.framer.com editor bundles, plus inline editor bootstrap blobs).
  *   3. The "Made in Framer" badge: its DOM container and any CSS rules that
  *      target it.
+ *
+ * Rewrites (when baseUrl is provided):
+ *   4. Same-origin relative URLs in <a href>, <area href>, <form action> are
+ *      converted to root-absolute paths so navigation works regardless of
+ *      whether the static host serves the page with a trailing slash.
  */
 
 export interface CleanResult {
@@ -18,6 +23,7 @@ export interface CleanResult {
     badgeNodes: number;
     badgeCssRules: number;
   };
+  rewrittenLinks: number;
 }
 
 const BADGE_SELECTORS = [
@@ -36,7 +42,10 @@ const EDITOR_HOST_PATTERNS = [
   /framer\.com\/[^"']*\/editor/i,
 ];
 
-export function cleanFramerHtml(rawHtml: string): CleanResult {
+export function cleanFramerHtml(
+  rawHtml: string,
+  baseUrl?: string,
+): CleanResult {
   const removed = {
     generatorMeta: 0,
     editorScripts: 0,
@@ -44,6 +53,7 @@ export function cleanFramerHtml(rawHtml: string): CleanResult {
     badgeNodes: 0,
     badgeCssRules: 0,
   };
+  let rewrittenLinks = 0;
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(rawHtml, "text/html");
@@ -103,10 +113,69 @@ export function cleanFramerHtml(rawHtml: string): CleanResult {
     }
   });
 
+  // 4. Rewrite same-origin relative URLs to root-absolute paths. Without this,
+  //    a page saved as `link1/index.html` is served at `/link1/` and a relative
+  //    href="link2" resolves to `/link1/link2` instead of `/link2`.
+  if (baseUrl) {
+    let base: URL | null = null;
+    try {
+      base = new URL(baseUrl);
+    } catch {
+      // Bad baseUrl — skip rewriting rather than throwing.
+    }
+    if (base) {
+      const targets: Array<[string, string]> = [
+        ["a[href]", "href"],
+        ["area[href]", "href"],
+        ["form[action]", "action"],
+      ];
+      for (const [selector, attr] of targets) {
+        doc.querySelectorAll(selector).forEach((el) => {
+          const value = el.getAttribute(attr);
+          if (!value) return;
+          const rewritten = toRootAbsolute(value, base!);
+          if (rewritten !== null && rewritten !== value) {
+            el.setAttribute(attr, rewritten);
+            rewrittenLinks++;
+          }
+        });
+      }
+    }
+  }
+
   return {
     html: "<!doctype html>\n" + doc.documentElement.outerHTML,
     removed,
+    rewrittenLinks,
   };
+}
+
+/**
+ * Resolve a URL attribute against `base` and, if it lands on the same origin,
+ * return a root-absolute string (pathname + search + hash). Returns null when
+ * the value should be left alone (cross-origin, opaque scheme, anchor-only,
+ * already root-absolute, unparseable, etc.).
+ */
+function toRootAbsolute(value: string, base: URL): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  // Already root-absolute or protocol-relative — leave alone.
+  if (trimmed.startsWith("/")) return null;
+  // Pure fragment — leave alone (so in-page anchors keep working).
+  if (trimmed.startsWith("#")) return null;
+  // Opaque schemes we never want to touch.
+  if (/^(mailto:|tel:|sms:|javascript:|data:|blob:)/i.test(trimmed)) return null;
+  // Any other scheme (http:, https:, ftp:, ...) is absolute — leave alone.
+  if (/^[a-z][a-z0-9+.\-]*:/i.test(trimmed)) return null;
+
+  let resolved: URL;
+  try {
+    resolved = new URL(trimmed, base);
+  } catch {
+    return null;
+  }
+  if (resolved.origin !== base.origin) return null;
+  return resolved.pathname + resolved.search + resolved.hash;
 }
 
 /**

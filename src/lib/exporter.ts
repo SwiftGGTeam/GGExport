@@ -33,11 +33,11 @@ export async function exportSinglePage(
   const raw = await fetchViaProxy(url, { signal });
 
   onProgress?.({ kind: "info", message: "清洗 Framer 标识", percent: 60 });
-  const cleaned = cleanFramerHtml(raw);
+  const cleaned = cleanFramerHtml(raw, url);
 
   onProgress?.({
     kind: "success",
-    message: `已移除：generator x${cleaned.removed.generatorMeta} · editor scripts x${cleaned.removed.editorScripts} · preloads x${cleaned.removed.editorPreloads} · badge nodes x${cleaned.removed.badgeNodes} · badge css rules x${cleaned.removed.badgeCssRules}`,
+    message: `已移除：generator x${cleaned.removed.generatorMeta} · editor scripts x${cleaned.removed.editorScripts} · preloads x${cleaned.removed.editorPreloads} · badge nodes x${cleaned.removed.badgeNodes} · badge css rules x${cleaned.removed.badgeCssRules} · 链接改写 x${cleaned.rewrittenLinks}`,
     percent: 95,
   });
 
@@ -82,6 +82,7 @@ export async function exportFullSite(
     editorPreloads: 0,
     badgeNodes: 0,
     badgeCssRules: 0,
+    rewrittenLinks: 0,
   };
 
   // Concurrency-limited fetch loop. Public CORS proxies rate-limit aggressively,
@@ -98,13 +99,14 @@ export async function exportFullSite(
       const filePath = urlToFilePath(pageUrl);
       try {
         const raw = await fetchViaProxy(pageUrl, { signal });
-        const cleaned = cleanFramerHtml(raw);
+        const cleaned = cleanFramerHtml(raw, pageUrl);
         files[filePath] = cleaned.html;
         totals.generatorMeta += cleaned.removed.generatorMeta;
         totals.editorScripts += cleaned.removed.editorScripts;
         totals.editorPreloads += cleaned.removed.editorPreloads;
         totals.badgeNodes += cleaned.removed.badgeNodes;
         totals.badgeCssRules += cleaned.removed.badgeCssRules;
+        totals.rewrittenLinks += cleaned.rewrittenLinks;
       } catch (err) {
         failed.push(`${pageUrl}: ${(err as Error).message}`);
         onProgress?.({
@@ -159,6 +161,7 @@ function renderReadme(
     editorPreloads: number;
     badgeNodes: number;
     badgeCssRules: number;
+    rewrittenLinks: number;
   },
   failed: string[],
 ): string {
@@ -175,6 +178,7 @@ function renderReadme(
     `  editor preloads  : ${totals.editorPreloads}`,
     `  badge DOM nodes  : ${totals.badgeNodes}`,
     `  badge CSS rules  : ${totals.badgeCssRules}`,
+    `  链接改写        : ${totals.rewrittenLinks}`,
     ``,
     `资源策略 : 仅下载 HTML，CSS/JS/图片/字体仍指向 framerusercontent.com 等 CDN。`,
     `部署方式 : 直接把整个目录上传到任意静态托管 (Vercel / Netlify / Cloudflare Pages / GitHub Pages 等) 即可。`,

@@ -16,7 +16,6 @@ import {
   FileCode,
   Globe,
   Loader2,
-  Sparkles,
   StopCircle,
 } from "lucide-react";
 import {
@@ -119,16 +118,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       <div className="container max-w-3xl py-12">
-        <header className="mb-8 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-cyan-300 dark:bg-slate-100 dark:text-slate-900">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">GGExport</h1>
-            <p className="text-sm text-muted-foreground">
-              一键把 Framer 站点导出为干净的静态 HTML，免费、本地运行、无水印。
-            </p>
-          </div>
+        <header className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight">GGExport</h1>
+          <p className="text-sm text-muted-foreground">
+            一键把 Framer 站点导出为干净的静态 HTML，免费、本地运行、无水印。
+          </p>
         </header>
 
         <Card>
@@ -144,7 +138,6 @@ export default function App() {
               <Label htmlFor="url">站点 URL</Label>
               <Input
                 id="url"
-                placeholder="https://your-site.framer.website"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={running}
