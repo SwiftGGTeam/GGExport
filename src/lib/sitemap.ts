@@ -65,6 +65,26 @@ async function collectLocs(
     }
   }
 
+  // Multi-language Framer sites list non-default-locale URLs only as
+  // <xhtml:link rel="alternate" hreflang="...">  inside the canonical <url>
+  // entry — they never appear as a top-level <loc>. Without picking these up,
+  // paths like /zh-cn/ are missing from the export and 404 on the deployed
+  // static host. getElementsByTagNameNS matches the element by local name
+  // regardless of namespace prefix.
+  const altLinks = Array.from(doc.getElementsByTagNameNS("*", "link"));
+  for (const link of altLinks) {
+    const rel = (link.getAttribute("rel") ?? "").toLowerCase();
+    if (rel !== "alternate") continue;
+    const href = (link.getAttribute("href") ?? "").trim();
+    if (!href) continue;
+    try {
+      const u = new URL(href);
+      if (u.origin === origin) out.push(u.toString());
+    } catch {
+      // skip malformed entries
+    }
+  }
+
   return out;
 }
 
