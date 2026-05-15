@@ -113,6 +113,23 @@ export function cleanFramerHtml(
     }
   });
 
+  // 5. Strip a single trailing slash from location.pathname before Framer's
+  //    runtime reads it. Framer's canonical URLs are no-trailing-slash (its
+  //    own host 308-redirects /terms/ → /terms), and the router's locale
+  //    matcher only tolerates a missing slash for the default locale — for a
+  //    localized path like /zh-cn/terms/, the trailing slash survives prefix
+  //    stripping and the lookup against routes (which use `/terms`) misses,
+  //    falling back to the home route. Static hosts like GitHub Pages append
+  //    a trailing slash when serving `dir/index.html`, so we patch it back to
+  //    canonical form before any other script runs.
+  const head = doc.head;
+  if (head) {
+    const patch = doc.createElement("script");
+    patch.textContent =
+      '(function(){try{var p=location.pathname;if(p.length>1&&p.charCodeAt(p.length-1)===47){history.replaceState(history.state,"",p.slice(0,-1)+location.search+location.hash)}}catch(e){}})();';
+    head.insertBefore(patch, head.firstChild);
+  }
+
   // 4. Rewrite same-origin relative URLs to root-absolute paths. Without this,
   //    a page saved as `link1/index.html` is served at `/link1/` and a relative
   //    href="link2" resolves to `/link1/link2` instead of `/link2`.

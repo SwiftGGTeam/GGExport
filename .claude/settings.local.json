@@ -4,7 +4,17 @@
       "Bash(npx tsc *)",
       "Bash(./node_modules/.bin/tsc --noEmit)",
       "Bash(node_modules/.bin/tsc.cmd --noEmit)",
-      "Bash(node node_modules/typescript/bin/tsc --noEmit)"
+      "Bash(node node_modules/typescript/bin/tsc --noEmit)",
+      "WebFetch(domain:wwdc26.framer.website)",
+      "Bash(curl *)",
+      "Bash(Select-String -Pattern \"<title>\",\"条款\",\"Terms\",\"data-framer-page-id\",\"__framer_page_id\")",
+      "Bash(Select-Object -First 10)",
+      "Bash(powershell -Command \"\\(Invoke-WebRequest -Uri 'https://wwdc26.framer.website/zh-cn/terms' -UseBasicParsing\\).Content\")",
+      "Bash(powershell -Command \"\\(Invoke-WebRequest -Uri 'https://wwdc26.framer.website/terms' -UseBasicParsing\\).Content\")",
+      "Bash(powershell -Command \"\\(Invoke-WebRequest -Uri 'https://wwdc26.framer.website/zh-cn/' -UseBasicParsing\\).Content\")",
+      "Bash(powershell *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
