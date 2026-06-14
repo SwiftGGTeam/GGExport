@@ -1,11 +1,21 @@
 /**
- * CORS proxies (free public services). We try them in order and fall back on failure.
- * If all fail, callers can show a clear error to the user.
+ * Fetch-through proxies, tried in order with fallback on failure.
+ *
+ * The first entry is our OWN same-origin proxy: a Cloudflare Pages Function in
+ * production (functions/api/proxy.ts) and a Vite middleware in local dev/preview
+ * (see vite.config.ts). Being same-origin, it has no CORS, no rate limits, and
+ * no third-party outages — it should handle every request.
+ *
+ * The remaining public CORS proxies are last-resort fallbacks only. They are
+ * unreliable (they rate-limit, go down, or block unregistered origins — which is
+ * what broke export in the first place) and only matter if the same-origin proxy
+ * is somehow unavailable (e.g. opening the built files without the Function).
  */
 const PROXIES: Array<(url: string) => string> = [
-  (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  (u) => `/api/proxy?url=${encodeURIComponent(u)}`,
   (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
 ];
 
 export interface FetchOptions {
